@@ -76,12 +76,7 @@ export class ApiService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async get<T>(url: string, queryParams?: object): Promise<T> {
-
-    const requestId = this.getRequestId();
-
-    const getOperationResponse =  await this._retry.retryAsync(requestId, async () => {
-      return await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
-    }, this.getRetryConfiguration());
+    const getOperationResponse = await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
 
     return getOperationResponse;
   }
@@ -97,12 +92,7 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-
-    const requestId = this.getRequestId();
-
-    const postOperationResponse = await this._retry.retryAsync(requestId, async () => {
-      return await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
-    }, this.getRetryConfiguration());
+    const postOperationResponse = await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
 
     return postOperationResponse;
   }
@@ -118,12 +108,7 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-
-    const requestId = this.getRequestId();
-
-    const putOperationResponse = await this._retry.retryAsync(requestId, async () => {
-      return await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
-    }, this.getRetryConfiguration());
+    const putOperationResponse = await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
 
     return putOperationResponse;
   }
@@ -139,12 +124,7 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-
-    const requestId = this.getRequestId();
-
-    const patchOperationResponse = await this._retry.retryAsync(requestId, async () => {
-      return await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
-    }, this.getRetryConfiguration());
+    const patchOperationResponse = await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
 
     return patchOperationResponse;
   }
@@ -155,12 +135,7 @@ export class ApiService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async delete(url: string, queryParams?: object): Promise<void> {
-
-    const requestId = this.getRequestId();
-
-    const deleteOperationResponse = await this._retry.retryAsync(requestId, async () => {
-      return await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
-    }, this.getRetryConfiguration());
+    const deleteOperationResponse = await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
 
     return deleteOperationResponse;
   }
@@ -172,6 +147,9 @@ export class ApiService {
     body?: object
   ): Promise<T> {
     let request: AxiosPromise<T>;
+
+    const retryConfiguration = this.getRetryConfiguration();
+
     switch (method) {
       case HttpOperations.GET:
         request = this._httpClient.get<T>(url, { params: queryParams });
@@ -193,17 +171,27 @@ export class ApiService {
         throw new Error("Method not supported");
     }
 
-    const response = await request;
+    const requestId = this.getRequestId();
 
-    const data: T = response.data;
+    const operationResponse = await this._retry.retryAsync(requestId, async () => {
+      const response = await request;
+      const data: T = response.data;
+      return data;
+    }, retryConfiguration);
 
-    return data;
+    return operationResponse;
   }
 
+  /**
+   * Gets a request id
+   */
   private getRequestId(): Guid {
     return Guid.create();
   }
 
+  /**
+   * Get a retry configuration or default
+   */
   private getRetryConfiguration(): RetryOptions {
     const options = this.options.retryOptions;
 
