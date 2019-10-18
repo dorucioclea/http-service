@@ -1,8 +1,8 @@
-import { wait } from './utils/wait';
-import { ILogger } from './logging/iLogger';
-import { Guard } from './utils/guard';
+import { wait } from './wait';
+import { ILogger } from '../logging/iLogger';
+import { Guard } from './guard';
 import { Guid } from 'guid-typescript';
-import { logFormatter } from './utils/log-formatter';
+import { logFormatter } from './log-formatter';
 
 export interface RetryOptions {
     maxRetryCount: number;

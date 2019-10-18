@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosPromise, AxiosRequestConfig } from "axios";
 import { ILogger } from "./logging/iLogger";
-import { RetryOptions, Retry, RetryOperationOptions } from "./retry";
+import { RetryOptions, Retry, RetryOperationOptions } from "./utils/retry";
 import { Guard } from "./utils/guard";
 import { Guid } from "guid-typescript";
 import { logFormatter } from "./utils/log-formatter";
@@ -28,7 +28,7 @@ interface RequestOptions<T> {
 /**
  * Simple http service class with built-in retry support
  */
-export class ApiService {
+export class HttpService {
 
   /**
    * No retry object
@@ -42,7 +42,7 @@ export class ApiService {
    * Minimal default configuration for `Http Service`
    */
   private static DefaultConfig: Readonly<ApiServiceConfig> = {
-    retryOptions: ApiService.noRetry
+    retryOptions: HttpService.noRetry
   };
 
   /**
@@ -66,7 +66,7 @@ export class ApiService {
    * @param logger Logger instance
    */
   constructor(
-    public options: ApiServiceConfig = ApiService.DefaultConfig,
+    public options: ApiServiceConfig = HttpService.DefaultConfig,
     public logger: ILogger<string>
   ) {
 
@@ -262,6 +262,6 @@ export class ApiService {
 
     // In case we don't have a retry policy setup, just return no retry
     //
-    return options || ApiService.noRetry;
+    return options || HttpService.noRetry;
   }
 }

@@ -1,5 +1,5 @@
 import { Post } from "./entities/post";
-import { ApiService, ApiServiceConfig } from "./api/api";
+import { HttpService, ApiServiceConfig } from "./api/http-service";
 import { ConsoleLogger } from "./api/logging/implementation/console-logger";
 import { LogLevel } from "./api/logging/log-level";
 
@@ -15,7 +15,7 @@ const apiOptions: ApiServiceConfig = {
 //
 const apiLogger = new ConsoleLogger(LogLevel.Debug);
 
-const apiService = new ApiService(apiOptions, apiLogger);
+const apiService = new HttpService(apiOptions, apiLogger);
 
 // Alternatively you can do it like this
 //
