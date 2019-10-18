@@ -1,7 +1,9 @@
 import axios, { AxiosInstance, AxiosPromise, AxiosRequestConfig } from "axios";
+import { RetryOptions, retryAsync } from "./retry";
 
 export interface ApiServiceConfig extends AxiosRequestConfig {
   localCache?: boolean;
+  retryOptions?: RetryOptions;
 }
 
 enum HttpOperations {
@@ -12,16 +14,38 @@ enum HttpOperations {
   GET = 'GET'
 }
 
+/**
+ * Simple http service class with built-in retry support
+ */
 export class ApiService {
+
+  /**
+   * No retry object
+   */
+  private static noRetry: RetryOptions = {
+    delayBetweenRetries: 0,
+    maxRetryCount: 1
+  };
+
+  /**
+   * Minimal default configuration for `Http Service`
+   */
+  private static DefaultConfig: ApiServiceConfig = {
+    retryOptions: ApiService.noRetry
+  };
 
   private _httpClient: AxiosInstance;
 
-  constructor(public options: ApiServiceConfig = {}) {
+  constructor(public options: ApiServiceConfig = ApiService.DefaultConfig) {
     this._httpClient = axios.create(options);
   }
 
   public async get<T>(url: string, queryParams?: object): Promise<T> {
-    return await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
+    const getOperationResponse =  await retryAsync(async () => {
+      return await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
+    }, this.getRetryConfiguration());
+
+    return getOperationResponse;
   }
 
   public async post<T>(
@@ -29,7 +53,9 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-    const postOperationResponse = await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
+    const postOperationResponse = await retryAsync(async () => {
+      return await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
+    }, this.getRetryConfiguration());
 
     return postOperationResponse;
   }
@@ -39,7 +65,9 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-    const putOperationResponse = await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
+    const putOperationResponse = await retryAsync(async () => {
+      return await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
+    }, this.getRetryConfiguration());
 
     return putOperationResponse;
   }
@@ -49,13 +77,17 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-    const patchOperationResponse = await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
+    const patchOperationResponse = await retryAsync(async () => {
+      return await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
+    }, this.getRetryConfiguration());
 
     return patchOperationResponse;
   }
 
   public async delete(url: string, queryParams?: object): Promise<void> {
-    const deleteOperationResponse =  await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
+    const deleteOperationResponse = await retryAsync(async () => {
+      return await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
+    }, this.getRetryConfiguration());
 
     return deleteOperationResponse;
   }
@@ -93,5 +125,13 @@ export class ApiService {
     const data: T = response.data;
 
     return data;
+  }
+
+  private getRetryConfiguration(): RetryOptions {
+    const options = this.options.retryOptions;
+
+    // In case we don't have a retry policy setup, just return no retry
+    //
+    return options || ApiService.noRetry;
   }
 }
