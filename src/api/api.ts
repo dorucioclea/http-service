@@ -17,6 +17,13 @@ enum HttpOperations {
   GET = 'GET'
 }
 
+interface RequestOptions<T> {
+  method: HttpOperations;
+  url: string;
+  queryParams?: object;
+  body?: T;
+}
+
 /**
  * Simple http service class with built-in retry support
  */
@@ -76,7 +83,14 @@ export class ApiService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async get<T>(url: string, queryParams?: object): Promise<T> {
-    const getOperationResponse = await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
+
+    const options: RequestOptions<T> = {
+      url,
+      method: HttpOperations.GET,
+      queryParams
+    };
+
+    const getOperationResponse = await this._makeRequest<T>(options);
 
     return getOperationResponse;
   }
@@ -89,10 +103,18 @@ export class ApiService {
    */
   public async post<T>(
     url: string,
-    body: object,
+    body: T,
     queryParams?: object
   ): Promise<T> {
-    const postOperationResponse = await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
+
+    const options: RequestOptions<T> = {
+      url,
+      body,
+      method: HttpOperations.POST,
+      queryParams
+    };
+
+    const postOperationResponse = await this._makeRequest<T>(options);
 
     return postOperationResponse;
   }
@@ -105,10 +127,18 @@ export class ApiService {
    */
   public async put<T>(
     url: string,
-    body: object,
+    body: T,
     queryParams?: object
   ): Promise<T> {
-    const putOperationResponse = await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
+
+    const options: RequestOptions<T> = {
+      url,
+      body,
+      method: HttpOperations.PUT,
+      queryParams
+    };
+
+    const putOperationResponse = await this._makeRequest<T>(options);
 
     return putOperationResponse;
   }
@@ -121,10 +151,18 @@ export class ApiService {
    */
   public async patch<T>(
     url: string,
-    body: object,
+    body: T,
     queryParams?: object
   ): Promise<T> {
-    const patchOperationResponse = await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
+
+    const options: RequestOptions<T> = {
+      url,
+      body,
+      method: HttpOperations.PATCH,
+      queryParams
+    };
+
+    const patchOperationResponse = await this._makeRequest<T>(options);
 
     return patchOperationResponse;
   }
@@ -135,36 +173,47 @@ export class ApiService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async delete(url: string, queryParams?: object): Promise<void> {
-    const deleteOperationResponse = await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
+
+    const options: RequestOptions<void> = {
+      url,
+      method: HttpOperations.DELETE,
+      queryParams
+    };
+
+    const deleteOperationResponse = await this._makeRequest<void>(options);
 
     return deleteOperationResponse;
   }
 
+  /**
+   * 
+   * @param method `Http method` to request
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   * @param body `Payload` to include
+   */
   private async _makeRequest<T>(
-    method: HttpOperations,
-    url: string,
-    queryParams?: object,
-    body?: object
+    options: RequestOptions<T>
   ): Promise<T> {
     let request: AxiosPromise<T>;
 
     const retryConfiguration = this.getRetryConfiguration();
 
-    switch (method) {
+    switch (options.method) {
       case HttpOperations.GET:
-        request = this._httpClient.get<T>(url, { params: queryParams });
+        request = this._httpClient.get<T>(options.url, { params: options.queryParams });
         break;
       case HttpOperations.POST:
-        request = this._httpClient.post<T>(url, body, { params: queryParams });
+        request = this._httpClient.post<T>(options.url, options.body, { params: options.queryParams });
         break;
       case HttpOperations.PUT:
-        request = this._httpClient.put<T>(url, body, { params: queryParams });
+        request = this._httpClient.put<T>(options.url, options.body, { params: options.queryParams });
         break;
       case HttpOperations.PATCH:
-        request = this._httpClient.patch<T>(url, body, { params: queryParams });
+        request = this._httpClient.patch<T>(options.url, options.body, { params: options.queryParams });
         break;
       case HttpOperations.DELETE:
-        request = this._httpClient.delete(url, { params: queryParams });
+        request = this._httpClient.delete(options.url, { params: options.queryParams });
         break;
 
       default:
