@@ -1,11 +1,21 @@
 import { Post } from "./entities/post";
-import { ApiService, ApiServiceConfig } from "./api/api";
+import { HttpService, ApiServiceConfig } from "./api/http-service";
+import { ConsoleLogger } from "./api/logging/implementation/console-logger";
+import { LogLevel } from "./api/logging/log-level";
 
 const apiOptions: ApiServiceConfig = {
-  baseURL: "https://jsonplaceholder.typicode.com"
+  baseURL: "https://jsonplaceholder.typicode.com",
+  retryOptions: {
+    delayBetweenRetries: 100,
+    maxRetryCount: 2,
+  }
 };
 
-const apiService = new ApiService(apiOptions);
+// Change this to the desired level of logging
+//
+const apiLogger = new ConsoleLogger(LogLevel.Debug);
+
+const apiService = new HttpService(apiOptions, apiLogger);
 
 // Alternatively you can do it like this
 //
