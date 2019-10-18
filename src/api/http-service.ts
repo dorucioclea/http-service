@@ -5,11 +5,17 @@ import { Guard } from "./utils/guard";
 import { Guid } from "guid-typescript";
 import { logFormatter } from "./utils/log-formatter";
 
+/**
+ * Configuration object that sets `Global options` to the axios layer
+ */
 export interface ApiServiceConfig extends AxiosRequestConfig {
   localCache?: boolean;
   retryOptions?: RetryOptions;
 }
 
+/**
+ * Http operations
+ */
 enum HttpOperations {
   POST = 'POST',
   PUT = 'PUT',
@@ -18,11 +24,14 @@ enum HttpOperations {
   GET = 'GET'
 }
 
+/**
+ * Request options for the internal request method
+ */
 interface RequestOptions<T> {
   method: HttpOperations;
   url: string;
   queryParams?: object;
-  body?: T;
+  body?: Partial<T>;
 }
 
 /**
@@ -70,6 +79,8 @@ export class HttpService {
     public logger: ILogger<string>
   ) {
 
+    // Parameter validation
+    //
     Guard.throwIfNullOrEmpty(logger, 'logger');
 
     this._httpClient = axios.create(options);
@@ -84,6 +95,10 @@ export class HttpService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async get<T>(url: string, queryParams?: object): Promise<T> {
+
+    // Parameters validation
+    //
+    Guard.throwIfNullOrEmpty(url, 'url');
 
     const options: RequestOptions<T> = {
       url,
@@ -107,6 +122,11 @@ export class HttpService {
     body: T,
     queryParams?: object
   ): Promise<T> {
+
+    // Parameters validation
+    //
+    Guard.throwIfNullOrEmpty(url, 'url');
+    Guard.throwIfNullOrEmpty(body, 'body');
 
     const options: RequestOptions<T> = {
       url,
@@ -132,6 +152,11 @@ export class HttpService {
     queryParams?: object
   ): Promise<T> {
 
+    // Parameter validation
+    //
+    Guard.throwIfNullOrEmpty(url, 'url');
+    Guard.throwIfNullOrEmpty(body, 'body');
+
     const options: RequestOptions<T> = {
       url,
       body,
@@ -152,9 +177,14 @@ export class HttpService {
    */
   public async patch<T>(
     url: string,
-    body: T,
+    body: Partial<T>,
     queryParams?: object
   ): Promise<T> {
+
+    // Parameter validation
+    //
+    Guard.throwIfNullOrEmpty(url, 'url');
+    Guard.throwIfNullOrEmpty(body, 'body');
 
     const options: RequestOptions<T> = {
       url,
@@ -174,6 +204,10 @@ export class HttpService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async delete(url: string, queryParams?: object): Promise<void> {
+
+    // Parameter validation
+    //
+    Guard.throwIfNullOrEmpty(url, 'url');
 
     const options: RequestOptions<void> = {
       url,
@@ -196,6 +230,13 @@ export class HttpService {
   private async _makeRequest<T>(
     options: Readonly<RequestOptions<T>>
   ): Promise<T> {
+
+    // Parameter validation
+    //
+    Guard.throwIfNullOrEmpty(options, 'options');
+    Guard.throwIfNullOrEmpty(options.method, 'method');
+    Guard.throwIfNullOrEmpty(options.url, 'url');
+
     let request: AxiosPromise<T>;
 
     const requestId = this.getRequestId();
