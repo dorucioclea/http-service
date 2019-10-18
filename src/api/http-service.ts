@@ -1,8 +1,9 @@
 import axios, { AxiosInstance, AxiosPromise, AxiosRequestConfig } from "axios";
 import { ILogger } from "./logging/iLogger";
-import { RetryOptions, Retry } from "./retry";
+import { RetryOptions, Retry, RetryOperationOptions } from "./utils/retry";
 import { Guard } from "./utils/guard";
 import { Guid } from "guid-typescript";
+import { logFormatter } from "./utils/log-formatter";
 
 export interface ApiServiceConfig extends AxiosRequestConfig {
   localCache?: boolean;
@@ -17,15 +18,22 @@ enum HttpOperations {
   GET = 'GET'
 }
 
+interface RequestOptions<T> {
+  method: HttpOperations;
+  url: string;
+  queryParams?: object;
+  body?: T;
+}
+
 /**
  * Simple http service class with built-in retry support
  */
-export class ApiService {
+export class HttpService {
 
   /**
    * No retry object
    */
-  private static noRetry: RetryOptions = {
+  private static noRetry: Readonly<RetryOptions> = {
     delayBetweenRetries: 0,
     maxRetryCount: 1
   };
@@ -33,14 +41,14 @@ export class ApiService {
   /**
    * Minimal default configuration for `Http Service`
    */
-  private static DefaultConfig: ApiServiceConfig = {
-    retryOptions: ApiService.noRetry
+  private static DefaultConfig: Readonly<ApiServiceConfig> = {
+    retryOptions: HttpService.noRetry
   };
 
   /**
    * Axios Http client
    */
-  private readonly _httpClient: AxiosInstance;
+  private readonly _httpClient: Readonly<AxiosInstance>;
 
   /**
    * Logger instance
@@ -58,7 +66,7 @@ export class ApiService {
    * @param logger Logger instance
    */
   constructor(
-    public options: ApiServiceConfig = ApiService.DefaultConfig,
+    public options: ApiServiceConfig = HttpService.DefaultConfig,
     public logger: ILogger<string>
   ) {
 
@@ -76,7 +84,14 @@ export class ApiService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async get<T>(url: string, queryParams?: object): Promise<T> {
-    const getOperationResponse = await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
+
+    const options: RequestOptions<T> = {
+      url,
+      method: HttpOperations.GET,
+      queryParams
+    };
+
+    const getOperationResponse = await this._makeRequest<T>(options);
 
     return getOperationResponse;
   }
@@ -89,10 +104,18 @@ export class ApiService {
    */
   public async post<T>(
     url: string,
-    body: object,
+    body: T,
     queryParams?: object
   ): Promise<T> {
-    const postOperationResponse = await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
+
+    const options: RequestOptions<T> = {
+      url,
+      body,
+      method: HttpOperations.POST,
+      queryParams
+    };
+
+    const postOperationResponse = await this._makeRequest<T>(options);
 
     return postOperationResponse;
   }
@@ -105,10 +128,18 @@ export class ApiService {
    */
   public async put<T>(
     url: string,
-    body: object,
+    body: T,
     queryParams?: object
   ): Promise<T> {
-    const putOperationResponse = await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
+
+    const options: RequestOptions<T> = {
+      url,
+      body,
+      method: HttpOperations.PUT,
+      queryParams
+    };
+
+    const putOperationResponse = await this._makeRequest<T>(options);
 
     return putOperationResponse;
   }
@@ -121,10 +152,18 @@ export class ApiService {
    */
   public async patch<T>(
     url: string,
-    body: object,
+    body: T,
     queryParams?: object
   ): Promise<T> {
-    const patchOperationResponse = await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
+
+    const options: RequestOptions<T> = {
+      url,
+      body,
+      method: HttpOperations.PATCH,
+      queryParams
+    };
+
+    const patchOperationResponse = await this._makeRequest<T>(options);
 
     return patchOperationResponse;
   }
@@ -135,51 +174,77 @@ export class ApiService {
    * @param queryParams Query parameters to pass to the `HTTP call`
    */
   public async delete(url: string, queryParams?: object): Promise<void> {
-    const deleteOperationResponse = await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
+
+    const options: RequestOptions<void> = {
+      url,
+      method: HttpOperations.DELETE,
+      queryParams
+    };
+
+    const deleteOperationResponse = await this._makeRequest<void>(options);
 
     return deleteOperationResponse;
   }
 
+  /**
+   * 
+   * @param method `Http method` to request
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   * @param body `Payload` to include
+   */
   private async _makeRequest<T>(
-    method: HttpOperations,
-    url: string,
-    queryParams?: object,
-    body?: object
+    options: Readonly<RequestOptions<T>>
   ): Promise<T> {
     let request: AxiosPromise<T>;
 
+    const requestId = this.getRequestId();
     const retryConfiguration = this.getRetryConfiguration();
 
-    switch (method) {
+    this.logger.debug(requestId, `Doing a ${HttpOperations.GET} operation on url ${options.url}`, undefined, logFormatter);
+
+    switch (options.method) {
       case HttpOperations.GET:
-        request = this._httpClient.get<T>(url, { params: queryParams });
+        request = this._httpClient.get<T>(options.url, { params: options.queryParams });
         break;
       case HttpOperations.POST:
-        request = this._httpClient.post<T>(url, body, { params: queryParams });
+        request = this._httpClient.post<T>(options.url, options.body, { params: options.queryParams });
         break;
       case HttpOperations.PUT:
-        request = this._httpClient.put<T>(url, body, { params: queryParams });
+        request = this._httpClient.put<T>(options.url, options.body, { params: options.queryParams });
         break;
       case HttpOperations.PATCH:
-        request = this._httpClient.patch<T>(url, body, { params: queryParams });
+        request = this._httpClient.patch<T>(options.url, options.body, { params: options.queryParams });
         break;
       case HttpOperations.DELETE:
-        request = this._httpClient.delete(url, { params: queryParams });
+        request = this._httpClient.delete(options.url, { params: options.queryParams });
         break;
 
       default:
         throw new Error("Method not supported");
     }
 
-    const requestId = this.getRequestId();
-
-    const operationResponse = await this._retry.retryAsync(requestId, async () => {
+    const operationPromise = async () => {
       const response = await request;
       const data: T = response.data;
       return data;
-    }, retryConfiguration);
+    };
 
-    return operationResponse;
+    const retryOperationConfiguration: RetryOperationOptions<T> = {
+      guid: requestId,
+      retryOptions: retryConfiguration,
+      operationToExecute: operationPromise
+    }
+
+    const operationResponse = await this._retry.retryAsync(retryOperationConfiguration);
+
+    const retryCountLeft = operationResponse.retryOptions.maxRetryCount;
+
+    this.logger.debug(requestId, `Successfully fetched ${options.url} (${HttpOperations.GET} operation) after ${retryConfiguration.maxRetryCount - retryCountLeft} retries`, undefined, logFormatter);
+
+    const data = operationResponse.result;
+
+    return data;
   }
 
   /**
@@ -192,11 +257,11 @@ export class ApiService {
   /**
    * Get a retry configuration or default
    */
-  private getRetryConfiguration(): RetryOptions {
+  private getRetryConfiguration(): Readonly<RetryOptions> {
     const options = this.options.retryOptions;
 
     // In case we don't have a retry policy setup, just return no retry
     //
-    return options || ApiService.noRetry;
+    return options || HttpService.noRetry;
   }
 }
