@@ -1,5 +1,7 @@
 import { Post } from "./entities/post";
 import { ApiService, ApiServiceConfig } from "./api/api";
+import { ConsoleLogger } from "./api/logging/implementation/console-logger";
+import { LogLevel } from "./api/logging/log-level";
 
 const apiOptions: ApiServiceConfig = {
   baseURL: "https://jsonplaceholder.typicode.com",
@@ -9,7 +11,9 @@ const apiOptions: ApiServiceConfig = {
   }
 };
 
-const apiService = new ApiService(apiOptions);
+const apiLogger = new ConsoleLogger(LogLevel.Critical);
+
+const apiService = new ApiService(apiOptions, apiLogger);
 
 // Alternatively you can do it like this
 //
