@@ -3,6 +3,7 @@ import { ILogger } from "./logging/iLogger";
 import { RetryOptions, Retry } from "./retry";
 import { Guard } from "./utils/guard";
 import { Guid } from "guid-typescript";
+import { logFormatter } from "./utils/log-formatter";
 
 export interface ApiServiceConfig extends AxiosRequestConfig {
   localCache?: boolean;
@@ -197,7 +198,10 @@ export class ApiService {
   ): Promise<T> {
     let request: AxiosPromise<T>;
 
+    const requestId = this.getRequestId();
     const retryConfiguration = this.getRetryConfiguration();
+
+    this.logger.debug(requestId, `Doing a ${HttpOperations.GET} operation on url ${options.url}`, undefined, logFormatter);
 
     switch (options.method) {
       case HttpOperations.GET:
@@ -220,7 +224,6 @@ export class ApiService {
         throw new Error("Method not supported");
     }
 
-    const requestId = this.getRequestId();
 
     const operationResponse = await this._retry.retryAsync(requestId, async () => {
       const response = await request;
@@ -228,7 +231,13 @@ export class ApiService {
       return data;
     }, retryConfiguration);
 
-    return operationResponse;
+    const retryCountLeft = operationResponse.retryOptions.maxRetryCount;
+
+    this.logger.debug(requestId, `Successfully fetched ${options.url} (${HttpOperations.GET} operation) after ${retryConfiguration.maxRetryCount - retryCountLeft} retries`, undefined, logFormatter);
+
+    const data = operationResponse.result;
+
+    return data;
   }
 
   /**

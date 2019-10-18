@@ -11,7 +11,7 @@ const apiOptions: ApiServiceConfig = {
   }
 };
 
-const apiLogger = new ConsoleLogger(LogLevel.Critical);
+const apiLogger = new ConsoleLogger(LogLevel.Debug);
 
 const apiService = new ApiService(apiOptions, apiLogger);
 

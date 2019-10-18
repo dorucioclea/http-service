@@ -9,6 +9,11 @@ export interface RetryOptions {
     delayBetweenRetries: number;
 }
 
+export interface RetryResult<T> {
+    retryOptions: Partial<RetryOptions>;
+    result: T;
+}
+
 export class Retry {
 
 
@@ -23,13 +28,18 @@ export class Retry {
     }
 
 
-    public async retryAsync<T>(guid: Guid, operationToExecute: () => Promise<T>, { maxRetryCount, delayBetweenRetries }: RetryOptions): Promise<T> {
+    public async retryAsync<T>(guid: Guid, operationToExecute: () => Promise<T>, { maxRetryCount, delayBetweenRetries }: RetryOptions): Promise<RetryResult<T>> {
         try {
             const result = await operationToExecute();
 
-            this._logger.debug(guid, 'Successfully fetched result', undefined, logFormatter);
+            this._logger.debug(guid, 'Successfully fetched result in retry', undefined, logFormatter);
 
-            return result;
+            return {
+                result,
+                retryOptions: {
+                    maxRetryCount
+                }
+            };
 
         } catch (err) {
 
