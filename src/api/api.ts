@@ -1,5 +1,8 @@
 import axios, { AxiosInstance, AxiosPromise, AxiosRequestConfig } from "axios";
-import { RetryOptions, retryAsync } from "./retry";
+import { ILogger } from "./logging/iLogger";
+import { RetryOptions, Retry } from "./retry";
+import { Guard } from "./utils/guard";
+import { Guid } from "guid-typescript";
 
 export interface ApiServiceConfig extends AxiosRequestConfig {
   localCache?: boolean;
@@ -34,14 +37,30 @@ export class ApiService {
     retryOptions: ApiService.noRetry
   };
 
-  private _httpClient: AxiosInstance;
+  private readonly _httpClient: AxiosInstance;
 
-  constructor(public options: ApiServiceConfig = ApiService.DefaultConfig) {
+  private readonly _logger: ILogger<string>;
+
+  private readonly _retry: Retry;
+
+  constructor(
+    public options: ApiServiceConfig = ApiService.DefaultConfig,
+    public logger: ILogger<string>
+  ) {
+
+    Guard.throwIfNullOrEmpty(logger, 'logger');
+
     this._httpClient = axios.create(options);
+    this._logger = logger;
+
+    this._retry = new Retry(this._logger);
   }
 
   public async get<T>(url: string, queryParams?: object): Promise<T> {
-    const getOperationResponse =  await retryAsync(async () => {
+
+    const requestId = this.getRequestId();
+
+    const getOperationResponse =  await this._retry.retryAsync(requestId, async () => {
       return await this._makeRequest<T>(HttpOperations.GET, url, queryParams);
     }, this.getRetryConfiguration());
 
@@ -53,7 +72,10 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-    const postOperationResponse = await retryAsync(async () => {
+
+    const requestId = this.getRequestId();
+
+    const postOperationResponse = await this._retry.retryAsync(requestId, async () => {
       return await this._makeRequest<T>(HttpOperations.POST, url, queryParams, body);
     }, this.getRetryConfiguration());
 
@@ -65,7 +87,10 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-    const putOperationResponse = await retryAsync(async () => {
+
+    const requestId = this.getRequestId();
+
+    const putOperationResponse = await this._retry.retryAsync(requestId, async () => {
       return await this._makeRequest<T>(HttpOperations.PUT, url, queryParams, body);
     }, this.getRetryConfiguration());
 
@@ -77,7 +102,10 @@ export class ApiService {
     body: object,
     queryParams?: object
   ): Promise<T> {
-    const patchOperationResponse = await retryAsync(async () => {
+
+    const requestId = this.getRequestId();
+
+    const patchOperationResponse = await this._retry.retryAsync(requestId, async () => {
       return await this._makeRequest<T>(HttpOperations.PATCH, url, queryParams, body);
     }, this.getRetryConfiguration());
 
@@ -85,7 +113,10 @@ export class ApiService {
   }
 
   public async delete(url: string, queryParams?: object): Promise<void> {
-    const deleteOperationResponse = await retryAsync(async () => {
+
+    const requestId = this.getRequestId();
+
+    const deleteOperationResponse = await this._retry.retryAsync(requestId, async () => {
       return await this._makeRequest<void>(HttpOperations.DELETE, url, queryParams);
     }, this.getRetryConfiguration());
 
@@ -125,6 +156,10 @@ export class ApiService {
     const data: T = response.data;
 
     return data;
+  }
+
+  private getRequestId(): Guid {
+    return Guid.create();
   }
 
   private getRetryConfiguration(): RetryOptions {
