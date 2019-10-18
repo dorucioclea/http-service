@@ -1,0 +1,10 @@
+{
+  "name": "simple-http-service",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.html",
+  "dependencies": {
+    "axios": "0.19.0"
+  },
+  "keywords": []
+}
