@@ -2,7 +2,11 @@ import { Post } from "./entities/post";
 import { ApiService, ApiServiceConfig } from "./api/api";
 
 const apiOptions: ApiServiceConfig = {
-  baseURL: "https://jsonplaceholder.typicode.com"
+  baseURL: "https://jsonplaceholder.typicode.com",
+  retryOptions: {
+    delayBetweenRetries: 100,
+    maxRetryCount: 2,
+  }
 };
 
 const apiService = new ApiService(apiOptions);
