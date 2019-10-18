@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosPromise, AxiosRequestConfig } from "axios";
 import { ILogger } from "./logging/iLogger";
-import { RetryOptions, Retry } from "./retry";
+import { RetryOptions, Retry, RetryOperationOptions } from "./retry";
 import { Guard } from "./utils/guard";
 import { Guid } from "guid-typescript";
 import { logFormatter } from "./utils/log-formatter";
@@ -33,7 +33,7 @@ export class ApiService {
   /**
    * No retry object
    */
-  private static noRetry: RetryOptions = {
+  private static noRetry: Readonly<RetryOptions> = {
     delayBetweenRetries: 0,
     maxRetryCount: 1
   };
@@ -41,14 +41,14 @@ export class ApiService {
   /**
    * Minimal default configuration for `Http Service`
    */
-  private static DefaultConfig: ApiServiceConfig = {
+  private static DefaultConfig: Readonly<ApiServiceConfig> = {
     retryOptions: ApiService.noRetry
   };
 
   /**
    * Axios Http client
    */
-  private readonly _httpClient: AxiosInstance;
+  private readonly _httpClient: Readonly<AxiosInstance>;
 
   /**
    * Logger instance
@@ -194,7 +194,7 @@ export class ApiService {
    * @param body `Payload` to include
    */
   private async _makeRequest<T>(
-    options: RequestOptions<T>
+    options: Readonly<RequestOptions<T>>
   ): Promise<T> {
     let request: AxiosPromise<T>;
 
@@ -224,12 +224,19 @@ export class ApiService {
         throw new Error("Method not supported");
     }
 
-
-    const operationResponse = await this._retry.retryAsync(requestId, async () => {
+    const operationPromise = async () => {
       const response = await request;
       const data: T = response.data;
       return data;
-    }, retryConfiguration);
+    };
+
+    const retryOperationConfiguration: RetryOperationOptions<T> = {
+      guid: requestId,
+      retryOptions: retryConfiguration,
+      operationToExecute: operationPromise
+    }
+
+    const operationResponse = await this._retry.retryAsync(retryOperationConfiguration);
 
     const retryCountLeft = operationResponse.retryOptions.maxRetryCount;
 
@@ -250,7 +257,7 @@ export class ApiService {
   /**
    * Get a retry configuration or default
    */
-  private getRetryConfiguration(): RetryOptions {
+  private getRetryConfiguration(): Readonly<RetryOptions> {
     const options = this.options.retryOptions;
 
     // In case we don't have a retry policy setup, just return no retry

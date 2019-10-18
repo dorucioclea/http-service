@@ -11,6 +11,8 @@ const apiOptions: ApiServiceConfig = {
   }
 };
 
+// Change this to the desired level of logging
+//
 const apiLogger = new ConsoleLogger(LogLevel.Debug);
 
 const apiService = new ApiService(apiOptions, apiLogger);

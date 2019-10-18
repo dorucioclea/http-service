@@ -14,9 +14,13 @@ export interface RetryResult<T> {
     result: T;
 }
 
+export interface RetryOperationOptions<T> {
+    guid: Guid;
+    retryOptions: Readonly<RetryOptions>;
+    operationToExecute: () => Promise<T>;
+}
+
 export class Retry {
-
-
     private readonly _logger: ILogger<string>;
 
     public constructor(
@@ -28,11 +32,13 @@ export class Retry {
     }
 
 
-    public async retryAsync<T>(guid: Guid, operationToExecute: () => Promise<T>, { maxRetryCount, delayBetweenRetries }: RetryOptions): Promise<RetryResult<T>> {
+    public async retryAsync<T>(retryOptions: RetryOperationOptions<T>): Promise<RetryResult<T>> {
+        const { maxRetryCount, delayBetweenRetries } = retryOptions.retryOptions;
+        
         try {
-            const result = await operationToExecute();
+            const result = await retryOptions.operationToExecute();
 
-            this._logger.debug(guid, 'Successfully fetched result in retry', undefined, logFormatter);
+            this._logger.debug(retryOptions.guid, 'Successfully fetched result in retry', undefined, logFormatter);
 
             return {
                 result,
@@ -42,8 +48,6 @@ export class Retry {
             };
 
         } catch (err) {
-
-
             if (maxRetryCount > 1) {
                 // Wait between retries
                 //
@@ -51,14 +55,21 @@ export class Retry {
 
                 // Pass in a decremented number of retries to the next iteration
                 //
-                const newFunctionArguments: RetryOptions = {
+                const newRetryValues: Readonly<RetryOptions> = {
                     delayBetweenRetries,
                     maxRetryCount: maxRetryCount - 1
                 };
 
 
-                this._logger.debug(guid, `Starting retry ${newFunctionArguments.maxRetryCount}`, undefined, logFormatter);
-                return await this.retryAsync(guid, operationToExecute, newFunctionArguments);
+                this._logger.debug(retryOptions.guid, `Starting retry ${newRetryValues.maxRetryCount}`, undefined, logFormatter);
+
+                const nextRetryOptions: RetryOperationOptions<T> = {
+                    guid: retryOptions.guid,
+                    operationToExecute: retryOptions.operationToExecute,
+                    retryOptions: newRetryValues
+                }
+
+                return await this.retryAsync(nextRetryOptions);
             }
 
             // After the maximum retry has been exhausted just throw the error
