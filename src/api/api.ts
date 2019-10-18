@@ -37,12 +37,26 @@ export class ApiService {
     retryOptions: ApiService.noRetry
   };
 
+  /**
+   * Axios Http client
+   */
   private readonly _httpClient: AxiosInstance;
 
+  /**
+   * Logger instance
+   */
   private readonly _logger: ILogger<string>;
 
+  /**
+   * We use this to be able to retry our `HTTP operations`
+   */
   private readonly _retry: Retry;
 
+  /**
+   * Ctor
+   * @param options `Axios options`
+   * @param logger Logger instance
+   */
   constructor(
     public options: ApiServiceConfig = ApiService.DefaultConfig,
     public logger: ILogger<string>
@@ -56,6 +70,11 @@ export class ApiService {
     this._retry = new Retry(this._logger);
   }
 
+  /**
+   * Execute a `Get operation`
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   */
   public async get<T>(url: string, queryParams?: object): Promise<T> {
 
     const requestId = this.getRequestId();
@@ -67,6 +86,12 @@ export class ApiService {
     return getOperationResponse;
   }
 
+  /**
+   * Execute a `Post operation`
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param body Payload to include
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   */
   public async post<T>(
     url: string,
     body: object,
@@ -82,6 +107,12 @@ export class ApiService {
     return postOperationResponse;
   }
 
+  /**
+   * Execute a `Put operation`
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param body Payload to include
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   */
   public async put<T>(
     url: string,
     body: object,
@@ -97,6 +128,12 @@ export class ApiService {
     return putOperationResponse;
   }
 
+  /**
+   * Execute a `Patch operation`
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param body Payload to include
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   */
   public async patch<T>(
     url: string,
     body: object,
@@ -112,6 +149,11 @@ export class ApiService {
     return patchOperationResponse;
   }
 
+  /**
+   * Execute a `Delete operation`
+   * @param url URL to call - it's relative to the `BaseURL` passed into the configuration
+   * @param queryParams Query parameters to pass to the `HTTP call`
+   */
   public async delete(url: string, queryParams?: object): Promise<void> {
 
     const requestId = this.getRequestId();
