@@ -89,3 +89,4 @@ typings/
 
 server/obj
 server/bin
+.idea
