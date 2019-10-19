@@ -11,3 +11,18 @@ services:
       - 5000:5000
     volumes:
       - './server:/app'
+  sqlserver:
+    container_name: sqlserver
+    build:
+      context: ./
+      dockerfile: ./images/db.dockerfile
+    hostname: 'sqlserver'
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: "BigPassw0rd"
+    volumes:
+      - ./data/mssql:/var/opt/mssql3
+    ports:
+      - '1433:1433'
+    expose:
+      - 1433
