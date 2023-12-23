@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "1.6.0",
     "guid-typescript": "^1.0.9",
-    "nodemon": "^1.19.4",
+    "nodemon": "^3.0.2",
     "ts-node": "^8.4.1",
     "typescript": "^3.6.4"
   },
